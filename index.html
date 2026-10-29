@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StableBook — Horse Boarding Barn Book</title>
+<style>
+  :root{ --ink:#2e2a26; --mut:#7a6f63; --brand:#6d4c2f; --brand2:#9c6b30; --bg:#f8f5f0; --card:#fff; --line:#e2d9cc; --bad:#b3261e; --warn:#9a6b00; --ok:#2e7d32; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--ink); }
+  header{ background:var(--brand); color:#fff; padding:12px 16px; }
+  header h1{ margin:0; font-size:20px; }
+  header .sub{ font-size:12.5px; opacity:.92; margin-top:2px; }
+  nav{ display:flex; flex-wrap:wrap; gap:6px; padding:10px 12px 0; }
+  nav button{ border:1px solid var(--line); background:#fff; color:var(--ink); padding:8px 12px; border-radius:999px; font-size:14px; cursor:pointer; }
+  nav button.on{ background:var(--brand); color:#fff; border-color:var(--brand); }
+  main{ padding:12px; max-width:980px; margin:0 auto; }
+  .tab{ display:none; } .tab.on{ display:block; }
+  .card{ background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:12px; }
+  .card h2{ margin:0 0 8px; font-size:16px; } .card h3{ margin:10px 0 6px; font-size:14px; }
+  .row{ display:flex; flex-wrap:wrap; gap:10px; } .row > *{ flex:1 1 150px; }
+  label{ display:block; font-size:12.5px; color:var(--mut); margin:8px 0 3px; }
+  input, select, textarea{ width:100%; padding:9px; border:1px solid var(--line); border-radius:8px; font-size:15px; background:#fff; color:var(--ink); }
+  textarea{ min-height:52px; }
+  .btn{ display:inline-block; border:none; background:var(--brand2); color:#fff; padding:9px 14px; border-radius:8px; font-size:14.5px; cursor:pointer; margin:4px 4px 4px 0; }
+  .btn.alt{ background:#8d7b68; } .btn.danger{ background:var(--bad); } .btn.small{ padding:5px 9px; font-size:13px;min-height:40px;}
+  table{ width:100%; border-collapse:collapse; font-size:14px; }
+  th, td{ text-align:left; padding:7px 6px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th{ color:var(--mut); font-weight:600; font-size:12.5px; }
+  td.num, th.num{ text-align:right; }
+  .stat{ background:#f1e9dd; border-radius:10px; padding:10px 12px; flex:1 1 140px; }
+  .stat b{ display:block; font-size:20px; }
+  .pill{ display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:600; }
+  .pill.ok{ background:#e0f0e2; color:var(--ok); } .pill.soon{ background:#fdf0d0; color:var(--warn); }
+  .pill.expired, .pill.missing{ background:#fadbd8; color:var(--bad); } .pill.info{ background:#e8e0d2; color:#5d4a33; } .pill.sample{ background:#ffe1a8; color:#7a4d00; border:1px solid #e5b95e; }
+  .flag{ color:var(--bad); font-weight:700; } .warnT{ color:var(--warn); font-weight:600; }
+  .muted{ color:var(--mut); font-size:13px; }
+  .hidden{ display:none; }
+  #msg{ display:none; margin:0 12px; padding:9px 12px; border-radius:8px; background:#fdf0d0; color:#6b5200; font-size:14px; }
+  #msg.show{ display:block; }
+  .stallgrid{ display:flex; flex-wrap:wrap; gap:8px; }
+  .stall{ border:1px solid var(--line); border-radius:10px; padding:10px; width:150px; background:#fff; }
+  .stall.occ{ background:#f1e9dd; } .stall .nm{ font-weight:700; font-size:15px; }
+  #printArea{ display:none; }
+  @media (max-width:560px){ th,td{ padding:6px 4px; font-size:13px; } header h1{ font-size:18px; } .stall{ width:calc(50% - 6px); } }
+  @media print{ header, nav, main, #msg{ display:none !important; } body{ background:#fff; } #printArea{ display:block; padding:16px; font-size:13.5px; } #printArea h1{ font-size:19px; margin:0 0 2px; } #printArea table{ font-size:13px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>🐴 <span id="bizName">StableBook</span></h1>
+  <div class="sub">Horse boarding barn book — monthly board billing, extras ledger, stall board &amp; owner statements. Works 100% offline.</div>
+</header>
+<div id="msg"></div>
+<nav id="tabs">
+  <button data-tab="dash" class="on" onclick="SB.show('dash')">Dashboard</button>
+  <button data-tab="stalls" onclick="SB.show('stalls')">Stalls</button>
+  <button data-tab="horses" onclick="SB.show('horses')">Horses</button>
+  <button data-tab="owners" onclick="SB.show('owners')">Owners</button>
+  <button data-tab="extras" onclick="SB.show('extras')">Extras</button>
+  <button data-tab="statements" onclick="SB.show('statements')">Statements</button>
+  <button data-tab="costs" onclick="SB.show('costs')">Rate Check</button>
+  <button data-tab="help" onclick="SB.show('help')">Help &amp; Settings</button>
+</nav>
+<main>
+  <section class="tab on" id="tab-dash"></section>
+  <section class="tab" id="tab-stalls"></section>
+  <section class="tab" id="tab-horses"></section>
+  <section class="tab" id="tab-owners"></section>
+  <section class="tab" id="tab-extras"></section>
+  <section class="tab" id="tab-statements"></section>
+  <section class="tab" id="tab-costs"></section>
+  <section class="tab" id="tab-help"></section>
+</main>
+<div id="printArea"></div>
+<script>
+"use strict";
+/* ================= StableBook — horse boarding barn book =================
+   Single-file, offline, localStorage. All money math is pure and testable
+   via the SB namespace. Board is billed per calendar month, prorated by
+   the day for mid-month arrivals and departures. */
+var SB = (function(){
+  var KEY = "stablebook_v1";
+  var state = null;
+  var uidC = 1;
+
+  /* ---------- generic helpers ---------- */
+  function uid(p){ return p + "_" + (uidC++) + "_" + Math.floor(Math.random()*1e9).toString(36); }
+  function esc(s){ return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+  function num(v, dflt){ var n = (typeof v === "number") ? v : parseFloat(String(v == null ? "" : v).replace(/[$,]/g,"")); return isFinite(n) ? n : (dflt || 0); }
+  function round2(n){ return Math.round((n + Number.EPSILON) * 100) / 100; }
+  function money(n){ var v = round2(num(n)); var neg = v < 0; var a = Math.abs(v).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ","); return (neg ? "-$" : "$") + a; }
+
+  /* ---------- date helpers (string-based, timezone-safe) ---------- */
+  function pad2(n){ return (n < 10 ? "0" : "") + n; }
+  function fmtD(y, m0, d){ return y + "-" + pad2(m0 + 1) + "-" + pad2(d); }
+  function parseD(s){
+    if (typeof s !== "string") return null;
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s.trim());
+    if (!m) return null;
+    var y = +m[1], mo = +m[2] - 1, d = +m[3];
+    if (mo < 0 || mo > 11 || d < 1 || d > daysInMonth(y, mo)) return null;
+    return { y: y, m: mo, d: d };
+  }
+  function isDate(s){ return parseD(s) !== null; }
+  function daysInMonth(y, m0){ return [31, ((y % 4 === 0 && y % 100 !== 0) || y % 400 === 0) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m0]; }
+  function dayNum(s){ var p = parseD(s); return p ? Math.floor(Date.UTC(p.y, p.m, p.d) / 86400000) : NaN; }
+  function fromDayNum(n){ var t = new Date(n * 86400000); return fmtD(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate()); }
+  function addDays(s, n){ return fromDayNum(dayNum(s) + n); }
+  function addMonths(s, n){ var p = parseD(s); if (!p) return null; var total = p.y * 12 + p.m + n; var y = Math.floor(total / 12), m0 = total - y * 12; var d = Math.min(p.d, daysInMonth(y, m0)); return fmtD(y, m0, d); }
+  function todayStr(){ var t = new Date(); return fmtD(t.getFullYear(), t.getMonth(), t.getDate()); }
+  function monthOf(s){ return typeof s === "string" ? s.slice(0, 7) : ""; }
+  function validMonth(ym){ return typeof ym === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(ym); }
+  function monthParts(ym){ return { y: +ym.slice(0, 4), m: +ym.slice(5, 7) - 1 }; }
+  function monthStart(ym){ return ym + "-01"; }
+  function monthEnd(ym){ var p = monthParts(ym); return fmtD(p.y, p.m, daysInMonth(p.y, p.m)); }
+  function monthLabel(ym){ var names = ["January","February","March","April","May","June","July","August","September","October","November","December"]; var p = monthParts(ym); return names[p.m] + " " + p.y; }
+  function shiftMonth(ym, n){ var p = monthParts(ym); var total = p.y * 12 + p.m + n; var y = Math.floor(total / 12), m0 = total - y * 12; return y + "-" + pad2(m0 + 1); }
+  function prettyDate(s){ if (!isDate(s)) return "—"; var p = parseD(s); var names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; return names[p.m] + " " + p.d + ", " + p.y; }
+
+  /* ---------- defaults & sample data ---------- */
+  var EXTRA_CATS = ["Blanketing", "Supplements", "Hold for vet", "Hold for farrier", "Extra hay", "Extra shavings", "Training ride", "Other"];
+  var COST_CATS = ["Hay", "Grain & feed", "Bedding / shavings", "Labor", "Other"];
+  function defaultPrices(){ return { "Blanketing": 30, "Supplements": 25, "Hold for vet": 15, "Hold for farrier": 15, "Extra hay": 20, "Extra shavings": 12, "Training ride": 35, "Other": 0 }; }
+  function blankState(){
+    return { settings: { bizName: "My Boarding Barn", phone: "", email: "", address: "", statementNote: "Board is billed per calendar month and prorated by the day for mid-month arrivals and departures. Extras are itemized from the barn ledger. Thank you for boarding with us!", extraPrices: defaultPrices() },
+      stalls: [], owners: [], horses: [], extras: [], payments: [], costs: [] };
+  }
+  function mAgo(n, day){ var t = todayStr(); var ym = shiftMonth(monthOf(t), -n); var p = monthParts(ym); var d = Math.min(day || 1, daysInMonth(p.y, p.m)); return fmtD(p.y, p.m, d); }
+  function dAgo(n){ return addDays(todayStr(), -n); }
+  function seedState(){
+    var s = blankState();
+    s.settings.bizName = "Sunset Ridge Stables";
+    s.settings.phone = "(555) 014-2200";
+    s.settings.email = "sunsetridge@example.com";
+    s.settings.address = "4810 County Line Rd";
+    var i;
+    for (i = 1; i <= 12; i++) s.stalls.push({ id: "st" + i, label: "Stall " + i });
+    var owners = [
+      ["ow_sarah", "Sarah Mitchell", "(555) 210-8841", "sarah.m@example.com"],
+      ["ow_james", "James Okafor", "(555) 733-0192", "j.okafor@example.com"],
+      ["ow_hend", "Mark & Lisa Henderson", "(555) 442-6710", "hendersons@example.com"],
+      ["ow_maria", "Maria Garcia", "(555) 908-3345", "maria.g@example.com"],
+      ["ow_tom", "Tom Baker", "(555) 621-4478", "tbaker@example.com"],
+      ["ow_emily", "Emily Chen", "(555) 285-9903", "emily.chen@example.com"],
+      ["ow_david", "David Ruiz", "(555) 517-2264", "druiz@example.com"]
+    ];
+    owners.forEach(function(o){ s.owners.push({ id: o[0], name: o[1], phone: o[2], email: o[3], address: "", notes: "" }); });
+    var cm = monthOf(todayStr()), lm = shiftMonth(cm, -1), cmParts = monthParts(cm);
+    var cmDay = function(d){ return fmtD(cmParts.y, cmParts.m, Math.min(d, daysInMonth(cmParts.y, cmParts.m))); };
+    var horses = [
+      ["ho_whiskey", "Whiskey", "ow_sarah", "st1", "Quarter Horse", "Sorrel", "Gelding", 9, "Full board", 450, mAgo(5, 1), "", "2026-03-14"],
+      ["ho_bella", "Bella", "ow_james", "st2", "Thoroughbred", "Bay", "Mare", 7, "Full board", 475, mAgo(3, 1), "", addMonths(todayStr(), -4)],
+      ["ho_duke", "Duke", "ow_hend", "st3", "Appaloosa", "Leopard", "Gelding", 11, "Full board", 450, mAgo(6, 1), "", addMonths(todayStr(), -3)],
+      ["ho_penny", "Penny", "ow_hend", "st4", "Welsh Pony", "Palomino", "Mare", 6, "Full board", 425, mAgo(6, 1), "", addMonths(todayStr(), -2)],
+      ["ho_chico", "Chico", "ow_maria", "st5", "Mustang", "Dun", "Gelding", 8, "Full board", 500, cmDay(16), "", addMonths(todayStr(), -1)],
+      ["ho_rusty", "Rusty", "ow_tom", "st6", "Quarter Horse", "Chestnut", "Gelding", 13, "Full board", 425, mAgo(8, 1), "", addMonths(todayStr(), -5)],
+      ["ho_willow", "Willow", "ow_emily", "st7", "Arabian", "Grey", "Mare", 5, "Full board", 475, mAgo(2, 1), "", addMonths(todayStr(), -14)],
+      ["ho_scout", "Scout", "ow_david", "st8", "Paint", "Tobiano", "Gelding", 10, "Full board", 450, mAgo(6, 1), mAgo(1, 20), addMonths(todayStr(), -6)]
+    ];
+    horses.forEach(function(h){ s.horses.push({ id: h[0], name: h[1], ownerId: h[2], stallId: h[3], breed: h[4], color: h[5], sex: h[6], age: h[7], plan: h[8], rate: h[9], arrival: h[10], departure: h[11], coggins: h[12], feed: "", vet: "", farrier: "", notes: "" }); });
+    var extras = [
+      ["ex1", mAgo(1, 5), "ho_whiskey", "Blanketing", "Blanketing — cold snap week", 30],
+      ["ex2", mAgo(1, 12), "ho_duke", "Hold for farrier", "Held for farrier (shoeing)", 15],
+      ["ex3", mAgo(1, 18), "ho_rusty", "Extra hay", "Extra hay — hard keeper", 20],
+      ["ex4", cmDay(2), "ho_rusty", "Blanketing", "Blanketing", 30],
+      ["ex5", cmDay(3), "ho_bella", "Supplements", "Joint supplement (owner-supplied, barn feeds)", 25],
+      ["ex6", cmDay(6), "ho_whiskey", "Training ride", "Training ride — tune-up", 35],
+      ["ex7", cmDay(9), "ho_penny", "Extra shavings", "Extra shavings — deep bedding", 12],
+      ["ex8", cmDay(13), "ho_whiskey", "Training ride", "Training ride — trail prep", 35],
+      ["ex9", cmDay(15), "ho_rusty", "Extra hay", "Extra hay — hard keeper", 20],
+      ["ex10", cmDay(17), "ho_chico", "Hold for vet", "Held for vet (vaccinations)", 15]
+    ];
+    extras.forEach(function(e){ s.extras.push({ id: e[0], date: e[1], horseId: e[2], category: e[3], desc: e[4], amount: e[5] }); });
+    var pays = [
+      ["pa1", mAgo(1, 3), "ow_sarah", 480, "Check", "Last month: board + blanketing"],
+      ["pa2", mAgo(1, 4), "ow_james", 475, "Venmo", ""],
+      ["pa3", mAgo(1, 5), "ow_hend", 890, "Check", "Duke + Penny + farrier hold"],
+      ["pa4", mAgo(1, 6), "ow_emily", 475, "Cash", ""],
+      ["pa5", mAgo(1, 8), "ow_david", 450, "Check", "Scout — month before departure"],
+      ["pa6", cmDay(4), "ow_sarah", 450, "Check", "Board"],
+      ["pa7", cmDay(5), "ow_james", 475, "Venmo", "Board"]
+    ];
+    pays.forEach(function(p){ s.payments.push({ id: p[0], date: p[1], ownerId: p[2], amount: p[3], method: p[4], note: p[5] }); });
+    var costs = [
+      ["co1", lm, "Hay", "Round bales × 14", 1120],
+      ["co2", lm, "Grain & feed", "Senior feed + ration balancer", 640],
+      ["co3", lm, "Bedding / shavings", "Bulk shavings load", 310],
+      ["co4", cm, "Hay", "Round bales × 12", 960],
+      ["co5", cm, "Grain & feed", "Senior feed", 585],
+      ["co6", cm, "Bedding / shavings", "Bagged shavings", 265]
+    ];
+    costs.forEach(function(c){ s.costs.push({ id: c[0], month: c[1], category: c[2], desc: c[3], amount: c[4] }); });
+    return s;
+  }
+  /* ---------- persistence & sanitizing ---------- */
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  function load(){
+    var raw = null;
+    try { raw = localStorage.getItem(KEY); } catch (e) {}
+    if (!raw) { state = seedState(); save(); return; }
+    try { state = sanitize(JSON.parse(raw)); }
+    catch (e) { state = seedState(); save(); }
+  }
+  function cleanStr(v, max){ return typeof v === "string" ? v.slice(0, max || 300) : ""; }
+  function sanitize(st){
+    var out = blankState();
+    if (!st || typeof st !== "object") return out;
+    if (st.legal && typeof st.legal === "object") out.legal = { termsVersion: String(st.legal.termsVersion || ""), acceptedDate: String(st.legal.acceptedDate || ""), disclaimerShown: !!st.legal.disclaimerShown };
+    if (st.settings && typeof st.settings === "object") {
+      out.settings.bizName = cleanStr(st.settings.bizName, 80) || "My Boarding Barn";
+      out.settings.phone = cleanStr(st.settings.phone, 40);
+      out.settings.email = cleanStr(st.settings.email, 80);
+      out.settings.address = cleanStr(st.settings.address, 120);
+      out.settings.statementNote = cleanStr(st.settings.statementNote, 600);
+      var prices = defaultPrices();
+      if (st.settings.extraPrices && typeof st.settings.extraPrices === "object") {
+        EXTRA_CATS.forEach(function(c){ if (st.settings.extraPrices[c] != null) prices[c] = Math.max(0, num(st.settings.extraPrices[c])); });
+      }
+      out.settings.extraPrices = prices;
+    }
+    function arr(v){ return Array.isArray(v) ? v : []; }
+    var seenStall = {};
+    arr(st.stalls).forEach(function(x){ if (x && typeof x.id === "string" && x.id && !seenStall[x.id]) { seenStall[x.id] = 1; out.stalls.push({ id: x.id, label: cleanStr(x.label, 40) || "Stall" }); } });
+    var seenOwner = {};
+    arr(st.owners).forEach(function(x){ if (x && typeof x.id === "string" && x.id && !seenOwner[x.id]) { seenOwner[x.id] = 1; out.owners.push({ id: x.id, name: cleanStr(x.name, 80) || "Owner", phone: cleanStr(x.phone, 40), email: cleanStr(x.email, 80), address: cleanStr(x.address, 120), notes: cleanStr(x.notes, 400) }); } });
+    var seenHorse = {};
+    arr(st.horses).forEach(function(x){
+      if (!x || typeof x.id !== "string" || !x.id || seenHorse[x.id]) return;
+      if (!seenOwner[x.ownerId]) return;
+      if (!isDate(x.arrival)) return;
+      var dep = isDate(x.departure) ? x.departure : "";
+      if (dep && dayNum(dep) < dayNum(x.arrival)) dep = "";
+      seenHorse[x.id] = 1;
+      out.horses.push({ id: x.id, name: cleanStr(x.name, 60) || "Horse", ownerId: x.ownerId, stallId: seenStall[x.stallId] ? x.stallId : "", breed: cleanStr(x.breed, 60), color: cleanStr(x.color, 40), sex: cleanStr(x.sex, 20), age: Math.max(0, Math.floor(num(x.age))), plan: cleanStr(x.plan, 40) || "Full board", rate: Math.max(0, num(x.rate)), arrival: x.arrival, departure: dep, coggins: isDate(x.coggins) ? x.coggins : "", feed: cleanStr(x.feed, 300), vet: cleanStr(x.vet, 120), farrier: cleanStr(x.farrier, 120), notes: cleanStr(x.notes, 400) });
+    });
+    arr(st.extras).forEach(function(x){
+      if (!x || typeof x.id !== "string" || !x.id) return;
+      if (!seenHorse[x.horseId] || !isDate(x.date)) return;
+      var amt = num(x.amount);
+      if (!(amt > 0)) return;
+      out.extras.push({ id: x.id, date: x.date, horseId: x.horseId, category: EXTRA_CATS.indexOf(x.category) >= 0 ? x.category : "Other", desc: cleanStr(x.desc, 200), amount: round2(amt) });
+    });
+    arr(st.payments).forEach(function(x){
+      if (!x || typeof x.id !== "string" || !x.id) return;
+      if (!seenOwner[x.ownerId] || !isDate(x.date)) return;
+      var amt = num(x.amount);
+      if (!(amt > 0)) return;
+      out.payments.push({ id: x.id, date: x.date, ownerId: x.ownerId, amount: round2(amt), method: cleanStr(x.method, 30), note: cleanStr(x.note, 200) });
+    });
+    arr(st.costs).forEach(function(x){
+      if (!x || typeof x.id !== "string" || !x.id) return;
+      if (!validMonth(x.month)) return;
+      var amt = num(x.amount);
+      if (!(amt > 0)) return;
+      out.costs.push({ id: x.id, month: x.month, category: COST_CATS.indexOf(x.category) >= 0 ? x.category : "Other", desc: cleanStr(x.desc, 200), amount: round2(amt) });
+    });
+    return out;
+  }
+
+  /* ---------- lookups ---------- */
+  function ownerById(id){ for (var i = 0; i < state.owners.length; i++) if (state.owners[i].id === id) return state.owners[i]; return null; }
+  function horseById(id){ for (var i = 0; i < state.horses.length; i++) if (state.horses[i].id === id) return state.horses[i]; return null; }
+  function stallById(id){ for (var i = 0; i < state.stalls.length; i++) if (state.stalls[i].id === id) return state.stalls[i]; return null; }
+  function isCurrent(h, ref){ ref = ref || todayStr(); if (h.arrival > ref) return false; if (h.departure && h.departure < ref) return false; return true; }
+  function horseInMonth(h, ym){ return boardDays(h, ym) > 0; }
+  function stallOccupant(stallId, ref){ ref = ref || todayStr(); for (var i = 0; i < state.horses.length; i++) { var h = state.horses[i]; if (h.stallId === stallId && isCurrent(h, ref)) return h; } return null; }
+  function occupiedStalls(ref){ var n = 0; state.stalls.forEach(function(st){ if (stallOccupant(st.id, ref)) n++; }); return n; }
+
+  /* ---------- board math (the core) ---------- */
+  function boardDays(h, ym){
+    if (!validMonth(ym) || !h || !isDate(h.arrival)) return 0;
+    var start = Math.max(dayNum(h.arrival), dayNum(monthStart(ym)));
+    var last = dayNum(monthEnd(ym));
+    var end = h.departure && isDate(h.departure) ? Math.min(dayNum(h.departure), last) : last;
+    if (end < start) return 0;
+    return end - start + 1;
+  }
+  function boardCharge(h, ym){
+    var days = boardDays(h, ym);
+    if (!days) return 0;
+    var p = monthParts(ym);
+    return round2(num(h.rate) * days / daysInMonth(p.y, p.m));
+  }
+  function extrasFor(horseId, ym){
+    return state.extras.filter(function(e){ return e.horseId === horseId && (!ym || monthOf(e.date) === ym); })
+      .sort(function(a, b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+  }
+  function ownerHorses(ownerId){ return state.horses.filter(function(h){ return h.ownerId === ownerId; }); }
+  /* All charges (board + extras) for one owner in one month, itemized. */
+  function ownerMonthCharges(ownerId, ym){
+    var board = [], extras = [], bt = 0, et = 0;
+    ownerHorses(ownerId).forEach(function(h){
+      var days = boardDays(h, ym);
+      if (days > 0) { var amt = boardCharge(h, ym); var p = monthParts(ym); board.push({ horse: h, days: days, daysIn: daysInMonth(p.y, p.m), rate: num(h.rate), amount: amt }); bt = round2(bt + amt); }
+      extrasFor(h.id, ym).forEach(function(e){ extras.push({ horse: h, extra: e }); et = round2(et + e.amount); });
+    });
+    return { board: board, extras: extras, boardTotal: bt, extrasTotal: et, total: round2(bt + et) };
+  }
+  function ownerPayments(ownerId, ym){
+    return state.payments.filter(function(p){ return p.ownerId === ownerId && (!ym || monthOf(p.date) === ym); })
+      .sort(function(a, b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+  }
+  function sumList(list){ var t = 0; list.forEach(function(x){ t = round2(t + x.amount); }); return t; }
+  /* Charges strictly before month ym (board iterated month by month). */
+  function chargesBefore(ownerId, ym){
+    var total = 0, first = null;
+    ownerHorses(ownerId).forEach(function(h){ var m = monthOf(h.arrival); if (!first || m < first) first = m; });
+    state.extras.forEach(function(e){ var h = horseById(e.horseId); if (h && h.ownerId === ownerId) { var m = monthOf(e.date); if (!first || m < first) first = m; } });
+    if (!first) return 0;
+    var cur = first;
+    while (cur < ym) { total = round2(total + ownerMonthCharges(ownerId, cur).total); cur = shiftMonth(cur, 1); }
+    return total;
+  }
+  function paymentsBefore(ownerId, ym){
+    var start = monthStart(ym), t = 0;
+    state.payments.forEach(function(p){ if (p.ownerId === ownerId && p.date < start) t = round2(t + p.amount); });
+    return t;
+  }
+  /* Full statement for one owner + month. */
+  function statement(ownerId, ym){
+    var ch = ownerMonthCharges(ownerId, ym);
+    var pays = ownerPayments(ownerId, ym);
+    var paid = sumList(pays);
+    var prev = round2(chargesBefore(ownerId, ym) - paymentsBefore(ownerId, ym));
+    return { owner: ownerById(ownerId), month: ym, prevBalance: prev, board: ch.board, extras: ch.extras, boardTotal: ch.boardTotal, extrasTotal: ch.extrasTotal, chargesTotal: ch.total, payments: pays, paidTotal: paid, balanceDue: round2(prev + ch.total - paid) };
+  }
+  /* Balance through the end of month ym (default: current month). */
+  function ownerBalance(ownerId, throughYm){
+    var cm = monthOf(todayStr());
+    var end = throughYm && validMonth(throughYm) ? throughYm : cm;
+    var st = statement(ownerId, end);
+    return st.balanceDue;
+  }
+  function monthTotals(ym){
+    var billed = 0, collected = 0;
+    state.owners.forEach(function(o){ billed = round2(billed + ownerMonthCharges(o.id, ym).total); });
+    state.payments.forEach(function(p){ if (monthOf(p.date) === ym) collected = round2(collected + p.amount); });
+    var horsesIn = 0;
+    state.horses.forEach(function(h){ if (horseInMonth(h, ym)) horsesIn++; });
+    return { billed: billed, collected: collected, outstanding: round2(billed - collected), horses: horsesIn };
+  }
+  function allBalances(){
+    var rows = [];
+    state.owners.forEach(function(o){ var b = ownerBalance(o.id); if (Math.abs(b) >= 0.005) rows.push({ owner: o, balance: b }); });
+    rows.sort(function(a, b){ return b.balance - a.balance; });
+    return rows;
+  }
+
+  /* ---------- Coggins ---------- */
+  function cogginsExpiry(h){ return isDate(h.coggins) ? addMonths(h.coggins, 12) : ""; }
+  function cogginsStatus(h, ref){
+    ref = ref || todayStr();
+    var exp = cogginsExpiry(h);
+    if (!exp) return { status: "missing", expiry: "", label: "No Coggins on file" };
+    if (exp < ref) return { status: "expired", expiry: exp, label: "Coggins expired " + prettyDate(exp) };
+    if (dayNum(exp) - dayNum(ref) <= 30) return { status: "soon", expiry: exp, label: "Coggins expires " + prettyDate(exp) };
+    return { status: "ok", expiry: exp, label: "Coggins good to " + prettyDate(exp) };
+  }
+
+  /* ---------- costs / rate check ---------- */
+  function costsFor(ym){ return state.costs.filter(function(c){ return c.month === ym; }); }
+  function rateCheck(ym){
+    var list = costsFor(ym), total = sumList(list);
+    var byCat = {};
+    COST_CATS.forEach(function(c){ byCat[c] = 0; });
+    list.forEach(function(c){ byCat[c.category] = round2(byCat[c.category] + c.amount); });
+    var horsesIn = 0, boardBilled = 0;
+    state.horses.forEach(function(h){ if (horseInMonth(h, ym)) { horsesIn++; boardBilled = round2(boardBilled + boardCharge(h, ym)); } });
+    var stallCount = state.stalls.length;
+    return { month: ym, costs: list, costTotal: total, byCat: byCat, stallCount: stallCount,
+      costPerStall: stallCount ? round2(total / stallCount) : 0,
+      horses: horsesIn,
+      costPerHorse: horsesIn ? round2(total / horsesIn) : 0,
+      boardBilled: boardBilled,
+      avgBoard: horsesIn ? round2(boardBilled / horsesIn) : 0,
+      margin: round2(boardBilled - total) };
+  }
+
+  /* ---------- UI plumbing ---------- */
+  function el(id){ return document.getElementById(id); }
+  function msg(t){ var m = el("msg"); if (!m) return; m.textContent = t || ""; m.className = t ? "show" : ""; if (t) setTimeout(function(){ m.className = ""; }, 4200); }
+  function ask(q){ try { return (typeof confirm === "function") ? confirm(q) : true; } catch (e) { return true; } }
+  function msgV(t){ msg(t); var m = el("msg"); if (m) { try { if (typeof m.scrollIntoView === "function") m.scrollIntoView({ block: "start" }); } catch (e) {} } }
+  function focusField(id){ var f = el(id); if (!f) return; try { if (typeof f.scrollIntoView === "function") f.scrollIntoView({ block: "start" }); } catch (e) {} try { if (typeof f.focus === "function") f.focus(); } catch (e) {} }
+  /* Sample-barn detection: seed records carry these fixed IDs (user records
+     get uid() IDs, so they can never collide). Lets us label and selectively
+     clear demo data without changing the saved data model. */
+  var SAMPLE_IDS = {
+    stalls: { st1: 1, st2: 1, st3: 1, st4: 1, st5: 1, st6: 1, st7: 1, st8: 1, st9: 1, st10: 1, st11: 1, st12: 1 },
+    owners: { ow_sarah: 1, ow_james: 1, ow_hend: 1, ow_maria: 1, ow_tom: 1, ow_emily: 1, ow_david: 1 },
+    horses: { ho_whiskey: 1, ho_bella: 1, ho_duke: 1, ho_penny: 1, ho_chico: 1, ho_rusty: 1, ho_willow: 1, ho_scout: 1 },
+    extras: { ex1: 1, ex2: 1, ex3: 1, ex4: 1, ex5: 1, ex6: 1, ex7: 1, ex8: 1, ex9: 1, ex10: 1 },
+    payments: { pa1: 1, pa2: 1, pa3: 1, pa4: 1, pa5: 1, pa6: 1, pa7: 1 },
+    costs: { co1: 1, co2: 1, co3: 1, co4: 1, co5: 1, co6: 1 }
+  };
+  function isSample(kind, id){ return !!(SAMPLE_IDS[kind] && SAMPLE_IDS[kind][id]); }
+  function samplePill(kind, id){ return isSample(kind, id) ? ' <span class="pill sample">Sample</span>' : ""; }
+  function sampleCounts(){ var c = {}; ["stalls", "owners", "horses", "extras", "payments", "costs"].forEach(function(k){ c[k] = (state[k] || []).filter(function(x){ return isSample(k, x.id); }).length; }); return c; }
+  function hasSample(){ var c = sampleCounts(); return c.stalls + c.owners + c.horses + c.extras + c.payments + c.costs > 0; }
+  function bookCounts(){ return state.owners.length + " owners, " + state.horses.length + " horses, " + state.stalls.length + " stalls, " + state.extras.length + " extras, " + state.payments.length + " payments, " + state.costs.length + " cost entries"; }
+  function clearSample(){
+    if (!hasSample()) { msg("No sample data in this book — nothing to clear."); return; }
+    var c = sampleCounts();
+    if (!ask("Clear sample data only? This removes the sample records (" + c.horses + " sample horses, " + c.owners + " sample owners, " + c.extras + " sample extras, " + c.payments + " sample payments, " + c.costs + " sample costs, " + c.stalls + " sample stalls) and keeps everything you entered yourself.")) return;
+    var removedHorses = {};
+    state.horses.forEach(function(h){ if (isSample("horses", h.id)) removedHorses[h.id] = 1; });
+    state.horses = state.horses.filter(function(h){ return !isSample("horses", h.id); });
+    state.extras = state.extras.filter(function(e){ return !isSample("extras", e.id) && !removedHorses[e.horseId]; });
+    state.payments = state.payments.filter(function(p2){ return !isSample("payments", p2.id); });
+    state.costs = state.costs.filter(function(x){ return !isSample("costs", x.id); });
+    state.owners = state.owners.filter(function(o){ return !(isSample("owners", o.id) && ownerHorses(o.id).length === 0); });
+    state.stalls = state.stalls.filter(function(st){ if (!isSample("stalls", st.id)) return true; return state.horses.some(function(h){ return h.stallId === st.id; }); });
+    if (stmtOwner && !ownerById(stmtOwner)) stmtOwner = "";
+    if (editHorseId && !horseById(editHorseId)) editHorseId = "";
+    save(); render(); msg("Sample data cleared — your own records are untouched.");
+  }
+  var curTab = "dash", stmtMonth = monthOf(todayStr()), stmtOwner = "", costMonth = monthOf(todayStr()), editHorseId = "", editOwnerId = "", lastExtraHorse = "", lastExtraCat = "";
+  function show(tab){
+    curTab = tab;
+    var tabs = document.querySelectorAll("#tabs button");
+    for (var i = 0; i < tabs.length; i++) tabs[i].className = tabs[i].getAttribute("data-tab") === tab ? "on" : "";
+    var secs = document.querySelectorAll("main .tab");
+    for (var j = 0; j < secs.length; j++) secs[j].className = secs[j].id === "tab-" + tab ? "tab on" : "tab";
+    render();
+  }
+  function render(){
+    if (!state) return;
+    el("bizName").textContent = state.settings.bizName || "StableBook";
+    if (curTab === "dash") renderDash();
+    else if (curTab === "stalls") renderStalls();
+    else if (curTab === "horses") renderHorses();
+    else if (curTab === "owners") renderOwners();
+    else if (curTab === "extras") renderExtras();
+    else if (curTab === "statements") renderStatements();
+    else if (curTab === "costs") renderCosts();
+    else if (curTab === "help") renderHelp();
+  }
+  function ownerName(id){ var o = ownerById(id); return o ? o.name : "(unknown owner)"; }
+  function horseName(id){ var h = horseById(id); return h ? h.name : "(unknown horse)"; }
+  function ownerOptions(sel){ return state.owners.map(function(o){ return '<option value="' + o.id + '"' + (o.id === sel ? " selected" : "") + ">" + esc(o.name) + "</option>"; }).join(""); }
+  function horseOptions(sel){ return state.horses.map(function(h){ return '<option value="' + h.id + '"' + (h.id === sel ? " selected" : "") + ">" + esc(h.name) + " (" + esc(ownerName(h.ownerId)) + ")</option>"; }).join(""); }
+  function stallOptions(sel){ var out = '<option value="">— No stall —</option>'; state.stalls.forEach(function(st){ var occ = stallOccupant(st.id); var dis = occ && occ.stallId === st.id && (!editHorseId || occ.id !== editHorseId) ? " disabled" : ""; out += '<option value="' + st.id + '"' + (st.id === sel ? " selected" : "") + dis + ">" + esc(st.label) + (occ && occ.id !== editHorseId ? " — " + esc(occ.name) : "") + "</option>"; }); return out; }
+
+  function renderDash(){
+    var cm = monthOf(todayStr());
+    var mt = monthTotals(cm);
+    var occ = occupiedStalls(), total = state.stalls.length;
+    var pct = total ? Math.round(occ / total * 100) : 0;
+    var bals = allBalances();
+    var owed = 0; bals.forEach(function(r){ if (r.balance > 0) owed = round2(owed + r.balance); });
+    var html = "";
+    if (hasSample()) html += '<div class="card" style="border-color:#e5b95e;background:#fff8e6"><h2>🧪 Sample barn — DEMO data</h2><p class="muted" style="color:#6b5200">This book still contains the sample barn (records marked <span class="pill sample">Sample</span>), so the balances below include demo horses and owners — they are not your real numbers yet. Explore freely, then clear just the sample data when you are ready.</p><button class="btn alt" onclick="SB.clearSample()">Clear sample data only</button></div>';
+    html += '<div class="card"><h2>' + esc(monthLabel(cm)) + ' at a glance</h2><div class="row">' +
+      '<div class="stat">Stalls occupied<b>' + occ + " / " + total + '</b><span class="muted">' + pct + '% full</span></div>' +
+      '<div class="stat">Board + extras billed<b>' + money(mt.billed) + '</b><span class="muted">' + mt.horses + ' horses this month</span></div>' +
+      '<div class="stat">Collected<b>' + money(mt.collected) + '</b><span class="muted">payments recorded</span></div>' +
+      '<div class="stat">Owed right now<b>' + money(owed) + '</b><span class="muted">all open balances</span></div></div></div>';
+    var alerts = [];
+    state.horses.forEach(function(h){ if (!isCurrent(h)) return; var cs = cogginsStatus(h); if (cs.status !== "ok") alerts.push('<tr><td>' + esc(h.name) + '</td><td><span class="pill ' + cs.status + '">' + esc(cs.label) + "</span></td></tr>"); });
+    if (alerts.length) html += '<div class="card"><h2>⚠️ Coggins attention</h2><table><tr><th>Horse</th><th>Status</th></tr>' + alerts.join("") + "</table></div>";
+    html += '<div class="card"><h2>Owners with a balance</h2>';
+    if (!bals.length) html += '<p class="muted">Nobody owes anything. 🎉</p>';
+    else { html += "<table><tr><th>Owner</th><th class=\"num\">Balance</th><th></th></tr>"; bals.forEach(function(r){ html += "<tr><td>" + esc(r.owner.name) + samplePill("owners", r.owner.id) + '</td><td class="num">' + (r.balance > 0 ? '<span class="flag">' + money(r.balance) + "</span>" : money(r.balance)) + '</td><td><button class="btn small" onclick="SB.stmtFor(\'' + r.owner.id + "')\">Statement</button></td></tr>"; }); html += "</table>"; }
+    html += '<p class="muted">Balances run through the end of ' + esc(monthLabel(cm)) + ". Board is prorated by the day for mid-month arrivals and departures.</p></div>";
+    el("tab-dash").innerHTML = html;
+  }
+
+  function renderStalls(){
+    var html = '<div class="card"><h2>Stall board</h2><div class="stallgrid">';
+    state.stalls.forEach(function(st){
+      var occ = stallOccupant(st.id);
+      html += '<div class="stall' + (occ ? " occ" : "") + '"><div class="nm">' + esc(st.label) + samplePill("stalls", st.id) + "</div>" +
+        (occ ? "<div>" + esc(occ.name) + '</div><div class="muted">' + esc(ownerName(occ.ownerId)) + " · " + money(occ.rate) + "/mo</div>"
+             : '<div class="muted">Empty</div>') +
+        '<button class="btn small danger" onclick="SB.delStall(\'' + st.id + "')\">Remove</button></div>";
+    });
+    html += '</div><p class="muted">' + occupiedStalls() + " of " + state.stalls.length + " stalls occupied.</p></div>";
+    html += '<div class="card"><h2>Add a stall</h2><div class="row"><div><label>Stall label</label><input id="st_label" placeholder="Stall 13 / Paddock A"></div></div><button class="btn" onclick="SB.addStall()">Add stall</button></div>';
+    el("tab-stalls").innerHTML = html;
+  }
+
+  function renderHorses(){
+    var rows = state.horses.map(function(h){
+      var cs = cogginsStatus(h);
+      var cur = isCurrent(h);
+      return "<tr><td><b>" + esc(h.name) + "</b>" + samplePill("horses", h.id) + '<br><span class="muted">' + esc(h.breed || "") + (h.color ? " · " + esc(h.color) : "") + '</span></td><td>' + esc(ownerName(h.ownerId)) + "</td><td>" + (h.stallId && stallById(h.stallId) ? esc(stallById(h.stallId).label) : "—") + '</td><td class="num">' + money(h.rate) + '</td><td>' + (cur ? '<span class="pill ok">Boarding</span>' : '<span class="pill info">Departed ' + esc(prettyDate(h.departure)) + "</span>") + '</td><td><span class="pill ' + cs.status + '">' + esc(cs.status === "ok" ? "Coggins OK" : cs.label) + '</span></td><td><button class="btn small" onclick="SB.editHorse(\'' + h.id + "')\">Edit</button> <button class=\"btn small danger\" onclick=\"SB.delHorse('" + h.id + "')\">Delete</button></td></tr>";
+    }).join("");
+    var h = editHorseId ? horseById(editHorseId) : null;
+    var f = h || { name: "", ownerId: state.owners.length ? state.owners[0].id : "", stallId: "", breed: "", color: "", sex: "Gelding", age: "", plan: "Full board", rate: "", arrival: todayStr(), departure: "", coggins: "", feed: "", vet: "", farrier: "", notes: "" };
+    var html = '<div class="card"><h2>Horses (' + state.horses.length + ')</h2>' + (rows ? '<table><tr><th>Horse</th><th>Owner</th><th>Stall</th><th class="num">Board/mo</th><th>Status</th><th>Coggins</th><th></th></tr>' + rows + "</table>" : '<p class="muted">No horses yet — add the first one below.</p>') + "</div>";
+    html += '<div class="card"><h2>' + (h ? "Edit horse" : "Add a horse") + '</h2><div class="row">' +
+      '<div><label>Horse name *</label><input id="h_name" value="' + esc(f.name) + '"></div>' +
+      '<div><label>Owner *</label><select id="h_owner">' + ownerOptions(f.ownerId) + "</select></div>" +
+      '<div><label>Stall</label><select id="h_stall">' + stallOptions(f.stallId) + "</select></div></div>" +
+      '<div class="row"><div><label>Breed</label><input id="h_breed" value="' + esc(f.breed) + '"></div>' +
+      '<div><label>Color</label><input id="h_color" value="' + esc(f.color) + '"></div>' +
+      '<div><label>Sex</label><select id="h_sex">' + ["Gelding", "Mare", "Stallion", "Colt", "Filly"].map(function(x){ return '<option' + (f.sex === x ? " selected" : "") + ">" + x + "</option>"; }).join("") + "</select></div>" +
+      '<div><label>Age (yrs)</label><input inputmode="decimal" id="h_age" type="number" min="0" value="' + esc(f.age) + '"></div></div>' +
+      '<div class="row"><div><label>Board plan</label><input id="h_plan" value="' + esc(f.plan) + '"></div>' +
+      '<div><label>Monthly board rate ($) *</label><input inputmode="decimal" id="h_rate" type="number" min="0" step="0.01" value="' + esc(f.rate) + '"></div>' +
+      '<div><label>Arrival date *</label><input id="h_arrival" type="date" value="' + esc(f.arrival) + '"></div>' +
+      '<div><label>Departure date (blank = still here)</label><input id="h_departure" type="date" value="' + esc(f.departure) + '"></div></div>' +
+      '<div class="row"><div><label>Last Coggins test date</label><input id="h_coggins" type="date" value="' + esc(f.coggins) + '"></div>' +
+      '<div><label>Vet (name / phone)</label><input id="h_vet" value="' + esc(f.vet) + '"></div>' +
+      '<div><label>Farrier</label><input id="h_farrier" value="' + esc(f.farrier) + '"></div></div>' +
+      '<label>Feed instructions</label><textarea id="h_feed">' + esc(f.feed) + "</textarea>" +
+      '<label>Notes</label><textarea id="h_notes">' + esc(f.notes) + "</textarea>" +
+      '<button class="btn" onclick="SB.saveHorse()">' + (h ? "Save changes" : "Add horse") + "</button>" +
+      (h ? ' <button class="btn alt" onclick="SB.cancelEditHorse()">Cancel edit</button>' : "") + "</div>";
+    el("tab-horses").innerHTML = html;
+  }
+
+  function renderOwners(){
+    var rows = state.owners.map(function(o){
+      var hs = ownerHorses(o.id);
+      var bal = ownerBalance(o.id);
+      return "<tr><td><b>" + esc(o.name) + "</b>" + samplePill("owners", o.id) + '<br><span class="muted">' + esc(o.phone || "") + (o.email ? " · " + esc(o.email) : "") + '</span></td><td>' + hs.map(function(h){ return esc(h.name); }).join(", ") + '</td><td class="num">' + (bal > 0 ? '<span class="flag">' + money(bal) + "</span>" : money(bal)) + '</td><td><button class="btn small" onclick="SB.editOwner(\'' + o.id + "')\">Edit</button> <button class=\"btn small\" onclick=\"SB.stmtFor('" + o.id + "')\">Statement</button> <button class=\"btn small danger\" onclick=\"SB.delOwner('" + o.id + "')\">Delete</button></td></tr>";
+    }).join("");
+    var o = editOwnerId ? ownerById(editOwnerId) : null;
+    var f = o || { name: "", phone: "", email: "", address: "", notes: "" };
+    var html = '<div class="card"><h2>Owners (' + state.owners.length + ')</h2>' + (rows ? '<table><tr><th>Owner</th><th>Horses</th><th class="num">Balance</th><th></th></tr>' + rows + "</table>" : '<p class="muted">No owners yet.</p>') + "</div>";
+    html += '<div class="card"><h2>' + (o ? "Edit owner" : "Add an owner") + '</h2><div class="row">' +
+      '<div><label>Name *</label><input id="o_name" value="' + esc(f.name) + '"></div>' +
+      '<div><label>Phone</label><input id="o_phone" value="' + esc(f.phone) + '"></div>' +
+      '<div><label>Email</label><input id="o_email" value="' + esc(f.email) + '"></div></div>' +
+      '<label>Address</label><input id="o_address" value="' + esc(f.address) + '">' +
+      '<label>Notes</label><textarea id="o_notes">' + esc(f.notes) + "</textarea>" +
+      '<button class="btn" onclick="SB.saveOwner()">' + (o ? "Save changes" : "Add owner") + "</button>" +
+      (o ? ' <button class="btn alt" onclick="SB.cancelEditOwner()">Cancel edit</button>' : "") + "</div>";
+    el("tab-owners").innerHTML = html;
+  }
+
+  function renderExtras(){
+    var list = state.extras.slice().sort(function(a, b){ return a.date > b.date ? -1 : a.date < b.date ? 1 : 0; });
+    var cm = monthOf(todayStr());
+    var cmTotal = 0; list.forEach(function(e){ if (monthOf(e.date) === cm) cmTotal = round2(cmTotal + e.amount); });
+    var rows = list.map(function(e){ return "<tr><td>" + esc(prettyDate(e.date)) + "</td><td>" + esc(horseName(e.horseId)) + '</td><td>' + esc(e.category) + samplePill("extras", e.id) + '<br><span class="muted">' + esc(e.desc) + '</span></td><td class="num">' + money(e.amount) + '</td><td><button class="btn small danger" onclick="SB.delExtra(\'' + e.id + "')\">Delete</button></td></tr>"; }).join("");
+    var catOpts = EXTRA_CATS.map(function(c){ return '<option value="' + esc(c) + '"' + (c === lastExtraCat ? " selected" : "") + ">" + esc(c) + "</option>"; }).join("");
+    var html = '<div class="card"><h2>Extras ledger</h2><p class="muted">Extras are where barn money leaks — blanketing, supplements, holds, extra feed and bedding, training rides. Every entry lands on that owner\'s next monthly statement. Extras this month: <b>' + money(cmTotal) + '</b></p>' +
+      (rows ? '<table><tr><th>Date</th><th>Horse</th><th>Extra</th><th class="num">Amount</th><th></th></tr>' + rows + "</table>" : '<p class="muted">No extras recorded yet.</p>') + "</div>";
+    html += '<div class="card"><h2>Add an extra</h2><div class="row">' +
+      '<div><label>Date *</label><input id="e_date" type="date" value="' + todayStr() + '"></div>' +
+      '<div><label>Horse *</label><select id="e_horse">' + horseOptions(lastExtraHorse) + "</select></div>" +
+      '<div><label>Category</label><select id="e_cat" onchange="SB.extraCatPrice()">' + catOpts + "</select></div>" +
+      '<div><label>Amount ($) *</label><input inputmode="decimal" id="e_amount" type="number" min="0" step="0.01"></div></div>' +
+      '<label>Description</label><input id="e_desc" placeholder="e.g. Blanketing — cold snap week">' +
+      '<button class="btn" onclick="SB.addExtra()">Add extra</button></div>';
+    el("tab-extras").innerHTML = html;
+    extraCatPrice();
+  }
+  function extraCatPrice(){ var c = el("e_cat"), a = el("e_amount"); if (c && a && !a.value) a.value = state.settings.extraPrices[c.value] || ""; }
+
+  function renderStatements(){
+    if (!stmtOwner && state.owners.length) stmtOwner = state.owners[0].id;
+    var st = stmtOwner ? statement(stmtOwner, stmtMonth) : null;
+    var html = '<div class="card"><h2>Monthly statements</h2><div class="row">' +
+      '<div><label>Month</label><input id="s_month" type="month" value="' + stmtMonth + '" onchange="SB.stmtMonthChange()"></div>' +
+      '<div><label>Owner</label><select id="s_owner" onchange="SB.stmtOwnerChange()">' + ownerOptions(stmtOwner) + "</select></div></div>";
+    if (st && st.owner) {
+      html += '<table><tr><td>Previous balance</td><td class="num">' + money(st.prevBalance) + "</td></tr>" +
+        '<tr><td>Board — ' + esc(monthLabel(stmtMonth)) + '</td><td class="num">' + money(st.boardTotal) + "</td></tr>" +
+        '<tr><td>Extras</td><td class="num">' + money(st.extrasTotal) + "</td></tr>" +
+        '<tr><td>Payments this month</td><td class="num">−' + money(st.paidTotal) + "</td></tr>" +
+        '<tr><td><b>Balance due</b></td><td class="num"><b>' + money(st.balanceDue) + "</b></td></tr></table>" +
+        '<button class="btn" onclick="SB.printStatement()">🖨️ Print this statement</button></div>';
+    } else html += '<p class="muted">Add an owner first.</p></div>';
+    html += '<div class="card"><h2>Record a payment</h2><div class="row">' +
+      '<div><label>Date *</label><input id="p_date" type="date" value="' + todayStr() + '"></div>' +
+      '<div><label>Owner *</label><select id="p_owner">' + ownerOptions(stmtOwner) + "</select></div>" +
+      '<div><label>Amount ($) *</label><input inputmode="decimal" id="p_amount" type="number" min="0" step="0.01"></div>' +
+      '<div><label>Method</label><select id="p_method">' + ["Cash", "Check", "Venmo", "Zelle", "Card", "Bank transfer", "Other"].map(function(x){ return "<option>" + x + "</option>"; }).join("") + "</select></div></div>" +
+      '<label>Note</label><input id="p_note" placeholder="Optional">' +
+      '<button class="btn" onclick="SB.addPayment()">Record payment</button></div>';
+    var pays = state.payments.slice().sort(function(a, b){ return a.date > b.date ? -1 : a.date < b.date ? 1 : 0; }).slice(0, 30);
+    if (pays.length) { html += '<div class="card"><h2>Recent payments</h2><table><tr><th>Date</th><th>Owner</th><th>Method</th><th class="num">Amount</th><th></th></tr>' + pays.map(function(p){ return "<tr><td>" + esc(prettyDate(p.date)) + "</td><td>" + esc(ownerName(p.ownerId)) + samplePill("payments", p.id) + "</td><td>" + esc(p.method) + (p.note ? '<br><span class="muted">' + esc(p.note) + "</span>" : "") + '</td><td class="num">' + money(p.amount) + '</td><td><button class="btn small danger" onclick="SB.delPayment(\'' + p.id + "')\">Delete</button></td></tr>"; }).join("") + "</table></div>"; }
+    el("tab-statements").innerHTML = html;
+  }
+  function statementHTML(st){
+    var s = state.settings;
+    var out = "<h1>" + esc(s.bizName) + "</h1><p>" + esc(s.address || "") + (s.phone ? " · " + esc(s.phone) : "") + (s.email ? " · " + esc(s.email) : "") + "</p>" +
+      "<h2>Boarding statement — " + esc(monthLabel(st.month)) + "</h2><p><b>" + esc(st.owner.name) + "</b>" + (st.owner.phone ? " · " + esc(st.owner.phone) : "") + "</p>" +
+      '<table><tr><th>Description</th><th class="num">Amount</th></tr>' +
+      "<tr><td>Previous balance</td><td class=\"num\">" + money(st.prevBalance) + "</td></tr>";
+    st.board.forEach(function(b){ out += "<tr><td>Board — " + esc(b.horse.name) + " (" + money(b.rate) + "/mo" + (b.days < b.daysIn ? ", prorated " + b.days + " of " + b.daysIn + " days" : "") + ')</td><td class="num">' + money(b.amount) + "</td></tr>"; });
+    st.extras.forEach(function(x){ out += "<tr><td>" + esc(prettyDate(x.extra.date)) + " — " + esc(x.extra.category) + " — " + esc(x.horse.name) + (x.extra.desc ? " (" + esc(x.extra.desc) + ")" : "") + '</td><td class="num">' + money(x.extra.amount) + "</td></tr>"; });
+    st.payments.forEach(function(p){ out += "<tr><td>Payment — " + esc(prettyDate(p.date)) + (p.method ? " (" + esc(p.method) + ")" : "") + '</td><td class="num">−' + money(p.amount) + "</td></tr>"; });
+    out += '<tr><td><b>Balance due</b></td><td class="num"><b>' + money(st.balanceDue) + "</b></td></tr></table>" +
+      "<p>" + esc(s.statementNote) + "</p>";
+    return out;
+  }
+  function printStatement(){ var st = statement(stmtOwner, stmtMonth); el("printArea").innerHTML = statementHTML(st); window.print(); }
+
+  function renderCosts(){
+    var rc = rateCheck(costMonth);
+    var rows = rc.costs.map(function(c){ return "<tr><td>" + esc(c.category) + samplePill("costs", c.id) + '</td><td>' + esc(c.desc) + '</td><td class="num">' + money(c.amount) + '</td><td><button class="btn small danger" onclick="SB.delCost(\'' + c.id + "')\">Delete</button></td></tr>"; }).join("");
+    var html = '<div class="card"><h2>Rate check — is board covering your costs?</h2><div class="row"><div><label>Month</label><input id="c_month" type="month" value="' + costMonth + '" onchange="SB.costMonthChange()"></div></div>' +
+      '<div class="row"><div class="stat">Total barn costs<b>' + money(rc.costTotal) + '</b></div>' +
+      '<div class="stat">Cost per stall<b>' + money(rc.costPerStall) + '</b><span class="muted">across ' + rc.stallCount + " stalls</span></div>" +
+      '<div class="stat">Cost per horse<b>' + money(rc.costPerHorse) + '</b><span class="muted">' + rc.horses + " horses boarded</span></div>" +
+      '<div class="stat">Avg board charged<b>' + money(rc.avgBoard) + '</b><span class="muted">per horse this month</span></div>' +
+      '<div class="stat">Board billed − costs<b>' + money(rc.margin) + "</b><span class=\"muted\">before extras income</span></div></div>" +
+      (rc.costTotal > 0 && rc.avgBoard > 0 ? '<p>' + (rc.avgBoard >= rc.costPerHorse ? '✅ Average board covers feed &amp; bedding cost per horse, with <b>' + money(round2(rc.avgBoard - rc.costPerHorse)) + "</b> per horse left for everything else." : '⚠️ Average board is <b>' + money(round2(rc.costPerHorse - rc.avgBoard)) + "</b> per horse BELOW feed &amp; bedding cost — the rate is losing money before labor.") + "</p>" : '<p class="muted">Enter this month\'s hay, feed, and bedding costs below to see what each stall really costs you.</p>') + "</div>";
+    html += '<div class="card"><h2>Costs — ' + esc(monthLabel(costMonth)) + "</h2>" + (rows ? '<table><tr><th>Category</th><th>Description</th><th class="num">Amount</th><th></th></tr>' + rows + "</table>" : '<p class="muted">No costs entered for this month yet.</p>') + "</div>";
+    html += '<div class="card"><h2>Add a cost</h2><div class="row">' +
+      '<div><label>Category</label><select id="c_cat">' + COST_CATS.map(function(c){ return "<option>" + esc(c) + "</option>"; }).join("") + "</select></div>" +
+      '<div><label>Description</label><input id="c_desc" placeholder="e.g. Round bales × 12"></div>' +
+      '<div><label>Amount ($) *</label><input inputmode="decimal" id="c_amount" type="number" min="0" step="0.01"></div></div>' +
+      '<button class="btn" onclick="SB.addCost()">Add cost</button></div>';
+    el("tab-costs").innerHTML = html;
+  }
+
+  function renderHelp(){
+    var s = state.settings;
+    var priceRows = EXTRA_CATS.map(function(c){ return '<div><label>' + esc(c) + ' default ($)</label><input inputmode="decimal" id="pr_' + esc(c.replace(/ /g, "_")) + '" type="number" min="0" step="0.01" value="' + esc(s.extraPrices[c]) + '"></div>'; }).join("");
+    var helpHtml = '<div class="card"><h2>How StableBook works</h2>' +
+      "<p><b>Board billing:</b> each horse has a monthly rate. Statements bill per calendar month, prorated by the day when a horse arrives or leaves mid-month (16 days of a 31-day month at $500 = $258.06). No daily-rate arguments, ever — the math is on the statement.</p>" +
+      "<p><b>Extras ledger:</b> blanketing, supplements, vet/farrier holds, extra hay and shavings, training rides — log them the day they happen and they land on the owner's next statement automatically.</p>" +
+      "<p><b>Rate check:</b> enter the month's hay, grain, and bedding costs and see cost per stall and per horse next to what you actually charge — so a rate increase is a decision, not a guess.</p>" +
+      "<p><b>Your data</b> lives only in this browser on this device. Export a backup now and then — if the browser's site data is cleared, the backup file is how the book comes back.</p></div>";
+    var html = '<div class="card"><h2>Barn settings</h2><div class="row">' +
+      '<div><label>Barn name</label><input id="set_name" value="' + esc(s.bizName) + '"></div>' +
+      '<div><label>Phone</label><input id="set_phone" value="' + esc(s.phone) + '"></div>' +
+      '<div><label>Email</label><input id="set_email" value="' + esc(s.email) + '"></div></div>' +
+      '<label>Address (prints on statements)</label><input id="set_address" value="' + esc(s.address) + '">' +
+      '<label>Statement note (prints on statements)</label><textarea id="set_note">' + esc(s.statementNote) + "</textarea>" +
+      "<h3>Default extra prices</h3><div class=\"row\">" + priceRows + "</div>" +
+      '<button class="btn" onclick="SB.saveSettings()">Save settings</button></div>';
+    html += '<div class="card"><h2>Backup</h2><button class="btn" onclick="SB.exportBackup()">⬇️ Export backup (JSON)</button> ' +
+      '<label style="display:inline-block">Import backup <input id="importFile" type="file" accept=".json,application/json" onchange="SB.importFile(this)"></label>' +
+      '<p class="muted">Importing replaces the whole book with the backup\'s contents.</p>' +
+      '<button class="btn alt" onclick="SB.clearSample()">Clear sample data only</button> ' +
+      '<button class="btn alt" onclick="SB.loadDemo()">Reload sample barn</button> ' +
+      '<button class="btn danger" onclick="SB.clearAll()">Erase everything &amp; start empty</button></div>';
+    html += helpHtml;
+    el("tab-help").innerHTML = html;
+  }
+
+  /* ---------- mutations ---------- */
+  function addStall(){
+    var label = el("st_label").value.trim();
+    if (!label) { msg("Give the stall a label first."); return; }
+    state.stalls.push({ id: uid("st"), label: label }); save(); render(); msg("Stall added.");
+  }
+  function delStall(id){
+    var occ = stallOccupant(id);
+    if (occ) { msg("Stall is occupied by " + occ.name + " — move or remove that horse first."); return; }
+    var st0 = stallById(id); if (!st0) return;
+    if (!ask("Remove " + st0.label + "? The stall leaves the board; no horse records are changed.")) return;
+    state.stalls = state.stalls.filter(function(st){ return st.id !== id; });
+    state.horses.forEach(function(h){ if (h.stallId === id) h.stallId = ""; });
+    save(); render(); msg("Stall removed.");
+  }
+  function saveHorse(){
+    var name = el("h_name").value.trim(), ownerId = el("h_owner").value, arrival = el("h_arrival").value;
+    var rate = num(el("h_rate").value), dep = el("h_departure").value;
+    if (!name) { msgV("The horse needs a name."); return; }
+    if (!ownerById(ownerId)) { msgV("Pick an owner (add one on the Owners tab first)."); return; }
+    if (!isDate(arrival)) { msgV("Arrival date is required and must be a real date."); return; }
+    if (dep && !isDate(dep)) { msgV("Departure date must be a real date or blank."); return; }
+    if (dep && dayNum(dep) < dayNum(arrival)) { msgV("Departure can't be before arrival."); return; }
+    if (!(rate >= 0)) { msgV("Board rate can't be negative."); return; }
+    var stallId = el("h_stall").value;
+    if (stallId) { var occ = stallOccupant(stallId); if (occ && occ.id !== editHorseId && isCurrent({ arrival: arrival, departure: dep })) { msgV("That stall is taken by " + occ.name + "."); return; } }
+    var data = { name: name, ownerId: ownerId, stallId: stallId, breed: el("h_breed").value.trim(), color: el("h_color").value.trim(), sex: el("h_sex").value, age: Math.max(0, Math.floor(num(el("h_age").value))), plan: el("h_plan").value.trim() || "Full board", rate: round2(rate), arrival: arrival, departure: dep, coggins: el("h_coggins").value, feed: el("h_feed").value.trim(), vet: el("h_vet").value.trim(), farrier: el("h_farrier").value.trim(), notes: el("h_notes").value.trim() };
+    if (editHorseId) { var h = horseById(editHorseId); for (var k in data) h[k] = data[k]; msg("Horse saved."); }
+    else { data.id = uid("ho"); state.horses.push(data); msg("Horse added."); }
+    editHorseId = ""; save(); render();
+  }
+  function editHorse(id){ editHorseId = id; render(); focusField("h_name"); }
+  function cancelEditHorse(){ editHorseId = ""; render(); }
+  function delHorse(id){
+    var h = horseById(id); if (!h) return;
+    var nx = state.extras.filter(function(e){ return e.horseId === id; }).length;
+    if (!ask("Delete " + h.name + " (owner: " + ownerName(h.ownerId) + ")? Its " + nx + " extra" + (nx === 1 ? "" : "s") + " will also be removed. This cannot be undone.")) return;
+    state.horses = state.horses.filter(function(x){ return x.id !== id; });
+    state.extras = state.extras.filter(function(e){ return e.horseId !== id; });
+    if (editHorseId === id) editHorseId = "";
+    save(); render(); msg(h.name + " and its extras were removed.");
+  }
+  function saveOwner(){
+    var name = el("o_name").value.trim();
+    if (!name) { msgV("The owner needs a name."); return; }
+    var data = { name: name, phone: el("o_phone").value.trim(), email: el("o_email").value.trim(), address: el("o_address").value.trim(), notes: el("o_notes").value.trim() };
+    if (editOwnerId) { var o = ownerById(editOwnerId); for (var k in data) o[k] = data[k]; msg("Owner saved."); }
+    else { data.id = uid("ow"); state.owners.push(data); msg("Owner added."); }
+    editOwnerId = ""; save(); render();
+  }
+  function editOwner(id){ editOwnerId = id; render(); focusField("o_name"); }
+  function cancelEditOwner(){ editOwnerId = ""; render(); }
+  function delOwner(id){
+    if (ownerHorses(id).length) { msg("This owner still has horses in the book — remove or reassign them first."); return; }
+    var o0 = ownerById(id); if (!o0) return;
+    var np = state.payments.filter(function(p){ return p.ownerId === id; }).length;
+    if (!ask("Remove owner " + o0.name + "? Their " + np + " recorded payment" + (np === 1 ? "" : "s") + " will also be removed. This cannot be undone.")) return;
+    state.owners = state.owners.filter(function(o){ return o.id !== id; });
+    state.payments = state.payments.filter(function(p){ return p.ownerId !== id; });
+    if (stmtOwner === id) stmtOwner = "";
+    save(); render(); msg("Owner removed.");
+  }
+  function addExtra(){
+    var date = el("e_date").value, horseId = el("e_horse").value, amt = num(el("e_amount").value);
+    lastExtraHorse = horseId; lastExtraCat = el("e_cat").value;
+    if (!isDate(date)) { msg("Pick a real date for the extra."); return; }
+    if (!horseById(horseId)) { msg("Pick a horse."); return; }
+    if (!(amt > 0)) { msg("Extra amount must be more than $0."); return; }
+    state.extras.push({ id: uid("ex"), date: date, horseId: horseId, category: el("e_cat").value, desc: el("e_desc").value.trim(), amount: round2(amt) });
+    save(); render(); msg("Extra logged — it lands on the owner's next statement.");
+  }
+  function delExtra(id){ var e0 = null; state.extras.forEach(function(e){ if (e.id === id) e0 = e; }); if (!e0) return; if (!ask("Delete this extra — " + e0.category + ", " + money(e0.amount) + " for " + horseName(e0.horseId) + " on " + prettyDate(e0.date) + "? It comes off that owner's statement.")) return; state.extras = state.extras.filter(function(e){ return e.id !== id; }); save(); render(); }
+  function addPayment(){
+    var date = el("p_date").value, ownerId = el("p_owner").value, amt = num(el("p_amount").value);
+    if (!isDate(date)) { msg("Pick a real date for the payment."); return; }
+    if (!ownerById(ownerId)) { msg("Pick an owner."); return; }
+    if (!(amt > 0)) { msg("Payment amount must be more than $0."); return; }
+    state.payments.push({ id: uid("pa"), date: date, ownerId: ownerId, amount: round2(amt), method: el("p_method").value, note: el("p_note").value.trim() });
+    save(); render(); msg("Payment recorded.");
+  }
+  function delPayment(id){ var p0 = null; state.payments.forEach(function(p){ if (p.id === id) p0 = p; }); if (!p0) return; if (!ask("Delete this payment — " + money(p0.amount) + " from " + ownerName(p0.ownerId) + " on " + prettyDate(p0.date) + "? That owner's balance will go back up.")) return; state.payments = state.payments.filter(function(p){ return p.id !== id; }); save(); render(); }
+  function addCost(){
+    var amt = num(el("c_amount").value);
+    if (!(amt > 0)) { msg("Cost amount must be more than $0."); return; }
+    state.costs.push({ id: uid("co"), month: costMonth, category: el("c_cat").value, desc: el("c_desc").value.trim(), amount: round2(amt) });
+    save(); render(); msg("Cost added to " + monthLabel(costMonth) + ".");
+  }
+  function delCost(id){ var c0 = null; state.costs.forEach(function(c){ if (c.id === id) c0 = c; }); if (!c0) return; if (!ask("Delete this cost — " + c0.category + ", " + money(c0.amount) + (c0.desc ? " (" + c0.desc + ")" : "") + " for " + monthLabel(c0.month) + "?")) return; state.costs = state.costs.filter(function(c){ return c.id !== id; }); save(); render(); }
+  function saveSettings(){
+    state.settings.bizName = el("set_name").value.trim() || "My Boarding Barn";
+    state.settings.phone = el("set_phone").value.trim();
+    state.settings.email = el("set_email").value.trim();
+    state.settings.address = el("set_address").value.trim();
+    state.settings.statementNote = el("set_note").value.trim();
+    EXTRA_CATS.forEach(function(c){ var inp = el("pr_" + c.replace(/ /g, "_")); if (inp) state.settings.extraPrices[c] = Math.max(0, num(inp.value)); });
+    save(); render(); msg("Settings saved.");
+  }
+
+  /* ---------- backup ---------- */
+  function exportData(){ var s = JSON.parse(JSON.stringify(state)); try { var raw = localStorage.getItem(KEY); var o = raw ? JSON.parse(raw) : null; if (o && o.legal) s.legal = o.legal; } catch (e) {} return JSON.stringify(s, null, 2); }
+  function exportBackup(){
+    var blob = new Blob([exportData()], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "stablebook-backup-" + todayStr() + ".json";
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 500);
+  }
+  function importData(json){
+    var parsed;
+    try { parsed = JSON.parse(json); } catch (e) { return { ok: false, error: "That file isn't valid JSON — the book was not changed." }; }
+    if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.owners) || !Array.isArray(parsed.horses)) return { ok: false, error: "That doesn't look like a StableBook backup — the book was not changed." };
+    if (!ask("Replace the current book (" + bookCounts() + ") with this backup (" + parsed.owners.length + " owners, " + parsed.horses.length + " horses)? This cannot be undone.")) return { ok: false, error: "Import cancelled — the book was not changed." };
+    state = sanitize(parsed); save(); render();
+    return { ok: true };
+  }
+  function importFile(input){
+    var f = input.files && input.files[0]; if (!f) return;
+    var r = new FileReader();
+    r.onload = function(){ var res = importData(String(r.result)); msg(res.ok ? "Backup imported." : res.error); };
+    r.readAsText(f);
+  }
+  function loadDemo(){ if (!ask("Reload the sample barn? This REPLACES your current book (" + bookCounts() + ") with the demo barn. This cannot be undone — export a backup first if you need your data.")) return; state = seedState(); editHorseId = ""; editOwnerId = ""; save(); render(); msg("Sample barn loaded."); }
+  function clearAll(){ if (!ask("Erase everything and start empty? This deletes the whole book (" + bookCounts() + "). This cannot be undone — export a backup first if you need your data.")) return; state = blankState(); editHorseId = ""; editOwnerId = ""; stmtOwner = ""; save(); render(); msg("Book erased — start with the Owners tab, then add horses."); }
+
+  function init(){ load(); render(); }
+
+  return {
+    show: show, render: render,
+    addStall: addStall, delStall: delStall,
+    saveHorse: saveHorse, editHorse: editHorse, cancelEditHorse: cancelEditHorse, delHorse: delHorse,
+    saveOwner: saveOwner, editOwner: editOwner, cancelEditOwner: cancelEditOwner, delOwner: delOwner,
+    addExtra: addExtra, delExtra: delExtra, extraCatPrice: extraCatPrice,
+    addPayment: addPayment, delPayment: delPayment,
+    addCost: addCost, delCost: delCost, saveSettings: saveSettings,
+    stmtMonthChange: function(){ stmtMonth = el("s_month").value || stmtMonth; render(); },
+    stmtOwnerChange: function(){ stmtOwner = el("s_owner").value; render(); },
+    stmtFor: function(ownerId){ stmtOwner = ownerId; stmtMonth = monthOf(todayStr()); show("statements"); },
+    costMonthChange: function(){ costMonth = el("c_month").value || costMonth; render(); },
+    printStatement: printStatement,
+    exportBackup: exportBackup, importFile: importFile, importData: importData, exportData: exportData,
+    loadDemo: loadDemo, clearAll: clearAll, clearSample: clearSample, init: init,
+    /* test hooks */
+    _get: function(){ return state; }, _set: function(s){ state = sanitize(s); save(); },
+    boardDays: boardDays, boardCharge: boardCharge, ownerMonthCharges: ownerMonthCharges, statement: statement,
+    ownerBalance: ownerBalance, monthTotals: monthTotals, allBalances: allBalances, rateCheck: rateCheck,
+    cogginsStatus: cogginsStatus, cogginsExpiry: cogginsExpiry, occupiedStalls: occupiedStalls, stallOccupant: stallOccupant,
+    sanitize: sanitize, isSample: isSample, hasSample: hasSample, sampleCounts: sampleCounts, helpers: { round2: round2, money: money, esc: esc, isDate: isDate, daysInMonth: daysInMonth, addMonths: addMonths, addDays: addDays, shiftMonth: shiftMonth, monthOf: monthOf, prettyDate: prettyDate }
+  };
+})();
+if (typeof document !== "undefined" && document.getElementById) { SB.init(); }
+
+</script>
+
+<style id="wwLegalCss">
+#wwLegalOverlay{position:fixed;inset:0;z-index:99990;background:rgba(10,12,16,.72);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:18px 12px;box-sizing:border-box}
+#wwLegalOverlay[hidden]{display:none}
+.ww-card{background:#fff;color:#16181d;max-width:560px;width:100%;border-radius:14px;padding:22px 20px;box-sizing:border-box;box-shadow:0 12px 40px rgba(0,0,0,.4)}
+.ww-appname{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#5b6472;font-weight:700}
+.ww-card h2{margin:6px 0 10px;font-size:24px}
+.ww-sum{font-size:17px;line-height:1.45;font-weight:600;margin:10px 0}
+.ww-follow{color:#444c58;font-size:14px;line-height:1.45}
+.ww-updated{background:#fff4d6;border:1px solid #e3c566;color:#5c4a00;border-radius:8px;padding:8px 10px;font-size:14px}
+.ww-btn{display:block;width:100%;min-height:48px;margin:10px 0 0;padding:12px 14px;font-size:16px;border-radius:10px;border:1px solid #9aa3af;background:#f2f4f7;color:#16181d;cursor:pointer;box-sizing:border-box}
+.ww-btn.ww-primary{background:#14532d;border-color:#14532d;color:#fff;font-weight:700;min-height:52px}
+.ww-btn.ww-primary:disabled{opacity:.45;cursor:not-allowed}
+.ww-check{display:flex;gap:10px;align-items:flex-start;margin:14px 0 2px;font-size:15px;line-height:1.4;color:#16181d;cursor:pointer}
+.ww-check input{width:22px;height:22px;flex:0 0 auto;margin:1px 0 0;accent-color:#14532d;cursor:pointer}
+#wwLegalPanel{position:fixed;inset:0;z-index:99995;background:#fff;color:#16181d;overflow-y:auto;box-sizing:border-box}
+#wwLegalPanel[hidden]{display:none}
+.ww-panel-inner{max-width:720px;margin:0 auto;padding:16px 18px 40px;box-sizing:border-box;line-height:1.55}
+.ww-panel-inner h3{margin-top:26px}
+.ww-panel-inner h4{margin-top:20px}
+.ww-accept{background:#eef7ee;border:1px solid #b9d8b9;border-radius:8px;padding:10px 12px}
+.ww-seller{margin-top:28px;padding-top:12px;border-top:1px solid #ddd;color:#444c58}
+#wwLegalClose{min-height:48px;padding:10px 16px;font-size:16px;border-radius:10px;border:1px solid #9aa3af;background:#f2f4f7;color:#16181d;cursor:pointer}
+[data-ww-legal-card]{border:1px solid #9aa3af;border-radius:12px;padding:14px;margin:14px 0;background:rgba(127,127,127,.06)}
+[data-ww-legal-btn]{min-height:48px;padding:10px 16px;font-size:16px;border-radius:10px;border:1px solid #14532d;background:#14532d;color:#fff;font-weight:700;cursor:pointer;width:100%}
+@media print{#wwLegalOverlay,#wwLegalPanel,[data-ww-legal-card]{display:none!important}}
+</style>
+
+<!-- ===== White Wolf Legal Pattern v1.0 ===== -->
+<div id="wwLegalOverlay" hidden>
+  <div class="ww-card" role="dialog" aria-modal="true" aria-labelledby="wwLegalTitle">
+    <div class="ww-appname">StableBook</div>
+    <h2 id="wwLegalTitle">Terms of Use</h2>
+    <p class="ww-updated" id="wwUpdatedNote" hidden>Our terms were updated (v1.0).</p>
+    <p class="ww-sum">Your data stays on your device.<br>Estimates are aids, not guarantees.<br>You&#39;re responsible for checking outputs before you rely on them.</p>
+    <p class="ww-follow">The full Terms and Disclaimer are one tap away, now and any time in Settings &#8594; Legal.</p>
+    <button type="button" class="ww-btn" id="wwReadTerms">Read the full Terms</button>
+    <button type="button" class="ww-btn" id="wwReadDisc">Read the Estimator Disclaimer</button>
+    <label class="ww-check"><input type="checkbox" id="wwAgreeCheck"> <span>I have read the disclaimer and I agree to the Terms of Use</span></label>
+    <button type="button" class="ww-btn ww-primary" id="wwAgree" disabled>I Agree</button>
+  </div>
+</div>
+<div id="wwLegalPanel" hidden>
+  <div class="ww-panel-inner">
+    <button type="button" id="wwLegalClose">&#8592; Back</button>
+    <h2>Legal</h2>
+    <p class="ww-accept" id="wwAcceptLine">You have not recorded acceptance of the Terms yet.</p>
+    <h3>Terms of Use</h3>
+    <p><strong>Version 1.0 (DRAFT — pending attorney review)</strong> <strong>Seller: White Wolf Tree Service LLC, selling digital products under the name "White Wolf Digital"</strong> <strong>Contact: whitewolfoklahoma@gmail.com</strong></p>
+<hr>
+<h4>1. What you're buying</h4>
+<p>Our apps (including ForgeFit AI, ForgeKitchen, TreeBid Pro, SnowBid, WashPrice Pro, RoofSquares, JobProfit Tracker, PastureLedger, and the other titles sold under White Wolf Digital) are single-file software tools. When you buy one, you are buying a <strong>license to use the file</strong>, not ownership of the software itself.</p>
+<h4>2. Your license</h4>
+<ul>
+<li>You may use the app for your own personal or business work.</li>
+<li>You may open it on your own devices (phone, tablet, computer) and move your</li>
+</ul>
+<p>own data between them using the app's built-in backup/export tools.</p>
+<ul>
+<li>You may <strong>not</strong> resell, redistribute, give away, upload, or share the app</li>
+</ul>
+<p>file (or a copy of it) with anyone else — including posting it online, bundling it with other products, or selling access to it.</p>
+<ul>
+<li>You may <strong>not</strong> claim the app as your own work, remove its branding or</li>
+</ul>
+<p>notices, or use it to build a competing product for resale.</p>
+<ul>
+<li>One purchase = one buyer. A business purchase covers the buyer and their</li>
+</ul>
+<p>own employees using it for that business's work; it does not cover other businesses.</p>
+<h4>3. Your data stays yours — and stays on your device</h4>
+<ul>
+<li>The current versions of our apps run <strong>entirely on your device</strong>. They have</li>
+</ul>
+<p>no accounts, no sign-in, no analytics, and they collect, transmit, and store <strong>none</strong> of your information on any server. We never see your data.</p>
+<ul>
+<li>Your records are stored in your browser/app storage on your device. **You</li>
+</ul>
+<p>are responsible for backing them up** using the app's export tools. If you clear your browser data, lose your device, or uninstall the app, your records may be permanently lost, and we cannot recover them — we never had a copy.</p>
+<ul>
+<li>Files you export (backups, quotes, PDFs) are under your control. Where you</li>
+</ul>
+<p>store or send them is up to you.</p>
+<h4>4. Estimates are tools, not guarantees</h4>
+<p>Every number our apps produce — bids, prices, costs, calorie targets, projections, schedules, totals — is an <strong>estimate generated from the information you enter and the settings you choose</strong>. Outputs are aids for your own judgment, not guarantees of price, profit, outcome, or result. You are responsible for checking any output before relying on it (see also the disclaimer that applies to your app: Health Disclaimer for fitness/nutrition apps, Estimator Disclaimer for contractor tools). If an input is wrong, the output will be wrong.</p>
+<h4>5. Acceptable use</h4>
+<p>Don't use the apps to break the law, infringe anyone's rights, or misrepresent quotes, invoices, or records to your own customers. For the fitness apps, the guardrails in the app (healthy-rate limits, calorie floor) are part of the product — don't treat the app as a way around them.</p>
+<h4>6. Provided "as is"</h4>
+<p>The apps are provided <strong>"as is" and "as available," without warranties of any kind</strong>, express or implied — including merchantability, fitness for a particular purpose, accuracy of calculations, and uninterrupted or error-free operation — to the maximum extent allowed by law. Software has bugs; browsers change; we work to fix problems but do not promise any app is error-free or will work on every device or browser forever.</p>
+<h4>7. Limitation of liability</h4>
+<p>To the maximum extent allowed by law:</p>
+<ul>
+<li>We are **not liable for indirect, incidental, special, or consequential</li>
+</ul>
+<p>damages** — including lost profits, lost or mispriced jobs, lost data, or business interruption — arising from use of the apps.</p>
+<ul>
+<li>Our total liability for any claim connected to an app is limited to the</li>
+</ul>
+<p><strong>amount you paid for that app</strong>.</p>
+<ul>
+<li>Nothing in these terms limits liability that cannot legally be limited.</li>
+</ul>
+<h4>8. Refunds</h4>
+<p>Refunds are handled <strong>by the storefront you bought from, under that storefront's policy</strong> — Gumroad's refund policy for Gumroad purchases, and Google Play's refund policy for Play purchases. These terms do not add to, replace, or override the storefront's refund rules. If a file is defective and won't open, contact us at whitewolfoklahoma@gmail.com and we'll fix or replace the file.</p>
+<h4>9. Updates and changes to these terms</h4>
+<ul>
+<li>We may release updated versions of an app. Updates may add, change, or</li>
+</ul>
+<p>remove features.</p>
+<ul>
+<li>We may update these terms. The version you agreed to is recorded in the</li>
+</ul>
+<p>app (version number and date) at first-run acceptance. If terms change, the app may ask you to accept the new version once on next open. Updated terms apply going forward, not retroactively.</p>
+<ul>
+<li>If you don't agree to an updated version of the terms, stop using the app.</li>
+</ul>
+<h4>10. Governing law</h4>
+<p>These terms are governed by the laws of the <strong>State of Oklahoma</strong>, USA. (Attorney to confirm governing law and venue before publication.)</p>
+<h4>11. Contact</h4>
+<p>White Wolf Tree Service LLC (White Wolf Digital) — whitewolfoklahoma@gmail.com.</p>
+<hr>
+<h4>CONNECTED FEATURES — takes effect only when these features ship</h4>
+<p><em>The sections below apply only to future connected features (device sync via Health Connect, AI voice logging, and the AI Goal Preview in ForgeFit). They do not apply to the current offline versions, which never transmit data.</em></p>
+<ul>
+<li><strong>Opt-in only.</strong> Connected features are off by default. Each one asks for</li>
+</ul>
+<p>your separate, explicit consent — on its own consent screen, in plain language — before anything leaves your device. Declining never disables the app's offline features.</p>
+<ul>
+<li><strong>What gets sent.</strong> Only what the consent screen names, only when you use</li>
+</ul>
+<p>the feature: for example, a meal description (text, or audio only if cloud transcription is on) for AI voice logging, or the single photo you choose for an AI Goal Preview.</p>
+<ul>
+<li><strong>No retention by us.</strong> Our relay service passes your request to the named</li>
+</ul>
+<p>AI provider and keeps nothing — no copies of your photos, audio, transcripts, or entries are stored on our servers. Provider handling is described on the consent screen and in the Privacy Policy.</p>
+<ul>
+<li><strong>Health data stays on the device.</strong> Device sync (Health Connect) reads</li>
+</ul>
+<p>your health data on your phone and stores it in the app on your phone. It is not uploaded to us.</p>
+<ul>
+<li><strong>Allowances.</strong> Some connected features run on third-party AI services we</li>
+</ul>
+<p>pay for per use, so they may include a monthly allowance described in the app (for example, a set number of AI previews or voice entries per month), with optional additional credits. Allowances and pricing will be shown in the app before you use the feature; they are not a subscription unless the app says so in plain words.</p>
+<ul>
+<li><strong>Permissions.</strong> Connected features may request device permissions (such</li>
+</ul>
+<p>as Health Connect access or the microphone) at the moment you first use them. You can revoke permissions any time in your device settings; the related feature will simply stop working.</p>
+    <h3>Estimator Disclaimer</h3>
+<p><strong>Applies to: TreeBid Pro, SnowBid, WashPrice Pro, RoofSquares, JobProfit Tracker, FieldForms Toolkit, PaintPro, FenceDeck, MarketMaker, and the other estimating/pricing tools sold under White Wolf Digital — including bundles that contain them.</strong></p>
+<h4>Estimating aids, not finished quotes</h4>
+<ul>
+<li>These apps are <strong>estimating and record-keeping aids</strong>. Every bid, price,</li>
+</ul>
+<p>cost, measurement, and total they produce is an <strong>estimate based on the information and rates you enter</strong>.</p>
+<ul>
+<li>**You — the business owner — are responsible for verifying everything</li>
+</ul>
+<p>before you quote a customer:** measurements and quantities, site conditions, your current material and labor costs, your rates and margins, taxes, permit and license requirements, disposal rules, and any contract terms.</p>
+<ul>
+<li>Default rates, presets, and sample data included in the apps are starting</li>
+</ul>
+<p>points only. They are not market prices, not industry standards, and not a recommendation of what you should charge.</p>
+<ul>
+<li>A saved quote keeps the prices in effect when you created it (price</li>
+</ul>
+<p>snapshot). Changing your presets later does not change saved quotes — and a saved quote is still your responsibility to review before sending.</p>
+<h4>Specific tools</h4>
+<ul>
+<li><strong>TreeBid Pro:</strong> tree work is dangerous and site-specific. Difficulty</li>
+</ul>
+<p>factors and presets cannot see the actual tree, lean, rot, targets, or access. Inspect every job in person before final pricing. The "Invoice with Wave" feature is an open-and-paste handoff — TreeBid does not connect to Wave, and the invoice you send from Wave is yours.</p>
+<ul>
+<li><strong>RoofSquares / measurement tools:</strong> confirm roof measurements and pitch</li>
+</ul>
+<p>in person or by your usual method before ordering materials.</p>
+<ul>
+<li><strong>SnowBid / seasonal tools:</strong> route times, snowfall amounts, and service</li>
+</ul>
+<p>pricing vary by storm and site; seasonal contracts are your agreement with your customer, on your terms.</p>
+<ul>
+<li><strong>JobProfit Tracker:</strong> profit figures depend on the costs you enter.</li>
+</ul>
+<p>The app is not accounting or tax software and does not replace your bookkeeper or accountant.</p>
+<h4>Bottom line</h4>
+<p>If an output and your judgment disagree, trust your judgment — then fix the input. We are not responsible for jobs won, lost, or mispriced based on app outputs, within the limits of the Terms of Use.</p>
+    <h3>Privacy</h3>
+    <p>This app has no accounts and collects no data. Everything you enter is stored only on your device, in your browser/app storage, and is never uploaded, transmitted, or shared. We never see your data. Files you export (backups, quotes, PDFs) are under your control &mdash; store and send them only where you choose. If you clear your browser data, lose your device, or uninstall the app, your records may be permanently lost, so export backups regularly.</p>
+    <p class="ww-seller">Sold by White Wolf Tree Service LLC (White Wolf Digital) &mdash; whitewolfoklahoma@gmail.com</p>
+  </div>
+</div>
+
+<script>
+/* ===== White Wolf Legal Pattern v1.0 ===== */
+(function(){
+"use strict";
+var TERMS_VERSION = "1.0";
+var WW_KEY = "stablebook_v1";
+var WW_HAS_DISC = true;
+var WWREC = null;
+function wwValid(r){ return r && typeof r === "object" && typeof r.termsVersion === "string" && !!r.termsVersion; }
+function wwVerCmp(a,b){ var pa=String(a).split("."), pb=String(b).split("."); for(var i=0;i<3;i++){ var x=parseInt(pa[i]||"0",10)||0, y=parseInt(pb[i]||"0",10)||0; if(x<y) return -1; if(x>y) return 1; } return 0; }
+function wwReadStored(){ try{ var raw = localStorage.getItem(WW_KEY); if(!raw) return null; var o = JSON.parse(raw); return (o && typeof o === "object") ? o : null; }catch(e){ return null; } }
+var _wwStored = wwReadStored();
+if(_wwStored && wwValid(_wwStored.legal)) WWREC = _wwStored.legal;
+try{
+  var _wwOrigSet = localStorage.setItem.bind(localStorage);
+  localStorage.setItem = function(k,v){
+    if(k === WW_KEY && typeof v === "string"){
+      try{ var o = JSON.parse(v); if(o && typeof o === "object" && !Array.isArray(o)){
+        if(wwValid(o.legal)){ WWREC = o.legal; }
+        else if(WWREC){ o.legal = WWREC; v = JSON.stringify(o); }
+      } }catch(e){}
+    }
+    return _wwOrigSet(k,v);
+  };
+}catch(e){}
+function wwSyncState(){ try{ if(typeof state !== "undefined" && state && typeof state === "object" && WWREC) state.legal = WWREC; }catch(e){} }
+function wwPersist(){
+  wwSyncState();
+  try{ save() }catch(e){}
+  try{ var o = wwReadStored(); if(o){ o.legal = WWREC; localStorage.setItem(WW_KEY, JSON.stringify(o)); } }catch(e){}
+}
+function wwAcceptLine(){
+  var el = document.getElementById("wwAcceptLine"); if(!el) return;
+  if(WWREC && WWREC.acceptedDate){ el.textContent = "You agreed to Terms v" + WWREC.termsVersion + " on " + WWREC.acceptedDate + "."; }
+  else { el.textContent = "You have not recorded acceptance of the Terms yet."; }
+}
+function wwOpenLegal(){ var p = document.getElementById("wwLegalPanel"); if(p){ p.hidden = false; p.scrollTop = 0; } wwAcceptLine(); }
+function wwCloseLegal(){ var p = document.getElementById("wwLegalPanel"); if(p) p.hidden = true; }
+function wwInit(){
+  var overlay = document.getElementById("wwLegalOverlay");
+  var agree = document.getElementById("wwAgree");
+  var rt = document.getElementById("wwReadTerms");
+  var rd = document.getElementById("wwReadDisc");
+  var close = document.getElementById("wwLegalClose");
+  if(rt) rt.addEventListener("click", wwOpenLegal);
+  if(rd) rd.addEventListener("click", wwOpenLegal);
+  if(close) close.addEventListener("click", wwCloseLegal);
+  var agreeCheck = document.getElementById("wwAgreeCheck");
+  if(agree) agree.disabled = !(agreeCheck && agreeCheck.checked);
+  if(agreeCheck && agree) agreeCheck.addEventListener("change", function(){ agree.disabled = !agreeCheck.checked; });
+  if(agree) agree.addEventListener("click", function(){
+    if(agree.disabled || !(agreeCheck && agreeCheck.checked)) return;
+    WWREC = { termsVersion: TERMS_VERSION, acceptedDate: new Date().toISOString().slice(0,10), disclaimerShown: WW_HAS_DISC };
+    wwPersist(); wwAcceptLine();
+    if(overlay) overlay.hidden = true;
+  });
+  wwSyncState(); wwAcceptLine();
+  if(!WWREC || wwVerCmp(WWREC.termsVersion, TERMS_VERSION) < 0){
+    if(WWREC){ var note = document.getElementById("wwUpdatedNote"); if(note) note.hidden = false; }
+    if(overlay) overlay.hidden = false;
+  }
+  var anchors = [{sel:"#tab-help",marker:null}];
+  function wwEnsureBtn(){
+    for(var i=0;i<anchors.length;i++){
+      var a = anchors[i]; var el = document.querySelector(a.sel); if(!el) continue;
+      if(el.querySelector("[data-ww-legal-btn]")) continue;
+      var txt = el.textContent || "";
+      if(a.marker){ if(txt.toLowerCase().indexOf(a.marker.toLowerCase()) < 0) continue; }
+      else if(txt.replace(/\s+/g,"").length < 40) continue;
+      var card = document.createElement("div");
+      card.setAttribute("data-ww-legal-card","");
+      card.innerHTML = "<h3 style=\"margin:0 0 6px\">Legal</h3><p style=\"margin:0 0 10px\">Terms of Use, disclaimer and privacy for this app.</p>";
+      var b = document.createElement("button");
+      b.type = "button"; b.setAttribute("data-ww-legal-btn",""); b.textContent = "View Legal \u2014 Terms, Disclaimer & Privacy";
+      b.addEventListener("click", wwOpenLegal);
+      card.appendChild(b); el.appendChild(card);
+    }
+  }
+  wwEnsureBtn();
+  setInterval(wwEnsureBtn, 700);
+}
+if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", wwInit); else wwInit();
+})();
+</script>
+</body>
+</html>
